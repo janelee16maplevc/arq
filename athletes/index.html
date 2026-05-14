@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ARQ</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black:  #0a0a0a;
+      --white:  #ffffff;
+      --gray:   rgba(255,255,255,0.45);
+      --border: rgba(255,255,255,0.1);
+      --gold:   #c8a96e;
+      --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--black);
+      color: var(--white);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    .reveal {
+      opacity: 0; transform: translateY(20px);
+      transition: opacity 1s cubic-bezier(0.25,0.46,0.45,0.94),
+                  transform 1s cubic-bezier(0.25,0.46,0.45,0.94);
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      height: 64px; padding: 0 48px;
+      display: flex; align-items: center; justify-content: space-between;
+      background: linear-gradient(to bottom, rgba(10,10,10,0.9), transparent);
+    }
+    .nav-logo {
+      font-size: 18px; font-weight: 300; letter-spacing: 0.28em;
+      text-transform: uppercase; color: var(--white); text-decoration: none;
+    }
+    .nav-links { display: flex; align-items: center; gap: 36px; }
+    .nav-links a {
+      font-size: 11px; font-weight: 400; letter-spacing: 0.14em;
+      text-transform: uppercase; color: rgba(255,255,255,0.6);
+      text-decoration: none; transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--white); }
+    .nav-cta {
+      font-size: 11px; font-weight: 400; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--white) !important;
+      border-bottom: 1px solid rgba(255,255,255,0.4); padding-bottom: 2px;
+    }
+
+    /* ── HERO ── */
+    #hero {
+      position: relative; width: 100%; height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: flex-start; justify-content: flex-end;
+      padding: 80px 48px; overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute; inset: 0; z-index: 0;
+      background: linear-gradient(160deg, #1a1208 0%, #0d0a04 40%, #000 100%);
+    }
+    .hero-bg img {
+      width: 100%; height: 100%; object-fit: cover;
+      opacity: 0.55; display: block;
+    }
+    .hero-overlay {
+      position: absolute; inset: 0; z-index: 1;
+      background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.4) 100%);
+    }
+    .hero-content { position: relative; z-index: 2; max-width: 900px; }
+    .hero-kicker {
+      font-size: 11px; font-weight: 400; letter-spacing: 0.22em;
+      text-transform: uppercase; color: var(--gold);
+      display: block; margin-bottom: 28px;
+    }
+    .hero-h1 {
+      font-size: clamp(52px, 8vw, 112px);
+      font-weight: 200; line-height: 1.0; letter-spacing: -0.03em;
+      margin-bottom: 36px;
+    }
+    .hero-sub {
+      font-size: clamp(15px, 1.6vw, 18px); font-weight: 300;
+      line-height: 1.65; color: rgba(255,255,255,0.6);
+      max-width: 480px; margin-bottom: 48px;
+    }
+    .hero-actions { display: flex; align-items: center; gap: 32px; }
+    .btn-primary {
+      font-size: 11px; font-weight: 400; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--black);
+      background: var(--white); padding: 16px 36px;
+      text-decoration: none; transition: opacity 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.82; }
+    .btn-ghost {
+      font-size: 11px; font-weight: 400; letter-spacing: 0.18em;
+      text-transform: uppercase; color: rgba(255,255,255,0.6);
+      text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.3);
+      padding-bottom: 2px; transition: color 0.2s;
+    }
+    .btn-ghost:hover { color: var(--white); }
+    .hero-scroll {
+      position: absolute; bottom: 48px; right: 48px; z-index: 2;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+    }
+    .scroll-line {
+      width: 1px; height: 40px;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.3), transparent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
+
+    /* ── STATEMENT ── */
+    .statement {
+      padding: 140px 48px; border-top: 1px solid var(--border);
+    }
+    .statement-inner { max-width: 1200px; margin: 0 auto; }
+    .statement h2 {
+      font-size: clamp(36px, 5.5vw, 76px); font-weight: 200;
+      letter-spacing: -0.03em; line-height: 1.08;
+    }
+    .statement h2 em { font-style: normal; color: var(--gold); }
+    .statement-split {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 120px; align-items: end;
+    }
+    .statement-right {
+      font-size: 17px; font-weight: 300; line-height: 1.7; color: var(--gray);
+      padding-bottom: 8px;
+    }
+
+    /* ── FULL BLEED SECTIONS ── */
+    .full-statement {
+      padding: 120px 48px; border-top: 1px solid var(--border);
+      text-align: center;
+    }
+    .full-statement p {
+      font-size: clamp(28px, 4vw, 56px); font-weight: 200;
+      letter-spacing: -0.025em; line-height: 1.2;
+      max-width: 900px; margin: 0 auto;
+    }
+    .full-statement p em { font-style: normal; color: var(--gold); }
+
+    /* ── TWO COL ── */
+    .two-col {
+      border-top: 1px solid var(--border);
+      display: grid; grid-template-columns: 1fr 1fr;
+    }
+    .two-col-cell {
+      padding: 100px 80px;
+      border-right: 1px solid var(--border);
+    }
+    .two-col-cell:last-child { border-right: none; }
+    .cell-tag {
+      font-size: 10px; font-weight: 400; letter-spacing: 0.22em;
+      text-transform: uppercase; color: var(--gold);
+      display: block; margin-bottom: 36px;
+    }
+    .two-col-cell h3 {
+      font-size: clamp(24px, 2.5vw, 36px); font-weight: 200;
+      letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 24px;
+    }
+    .two-col-cell p {
+      font-size: 15px; font-weight: 300; line-height: 1.8; color: var(--gray);
+    }
+
+    /* ── MODES ── */
+    #modes { border-top: 1px solid var(--border); }
+    .modes-header {
+      padding: 100px 48px 0; max-width: 1200px; margin: 0 auto;
+    }
+    .modes-header h2 {
+      font-size: clamp(36px, 5vw, 68px); font-weight: 200;
+      letter-spacing: -0.03em; line-height: 1.05; max-width: 700px;
+    }
+    .modes-grid {
+      max-width: 1200px; margin: 80px auto 0;
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      border-top: 1px solid var(--border);
+    }
+    .mode-cell {
+      padding: 64px 48px;
+      border-right: 1px solid var(--border);
+    }
+    .mode-cell:last-child { border-right: none; }
+    .mode-num {
+      font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+      color: rgba(255,255,255,0.25); display: block; margin-bottom: 48px;
+    }
+    .mode-cell h3 {
+      font-size: 26px; font-weight: 200; letter-spacing: -0.015em;
+      margin-bottom: 20px; line-height: 1.2;
+    }
+    .mode-cell p { font-size: 14px; font-weight: 300; line-height: 1.8; color: var(--gray); }
+
+    /* ── HOW ── */
+    #how { border-top: 1px solid var(--border); }
+    .how-header { padding: 100px 48px 0; max-width: 1200px; margin: 0 auto; }
+    .how-header h2 {
+      font-size: clamp(36px, 5vw, 68px); font-weight: 200;
+      letter-spacing: -0.03em; line-height: 1.05;
+    }
+    .how-steps { max-width: 1200px; margin: 80px auto 0; border-top: 1px solid var(--border); }
+    .how-step {
+      display: grid; grid-template-columns: 80px 1fr 1fr;
+      padding: 0 48px; border-bottom: 1px solid var(--border);
+      align-items: start;
+    }
+    .how-step-n {
+      padding: 44px 0; font-size: 10px; letter-spacing: 0.2em;
+      text-transform: uppercase; color: rgba(255,255,255,0.25);
+    }
+    .how-step-title { padding: 44px 64px 44px 0; border-right: 1px solid var(--border); }
+    .how-step-title h3 {
+      font-size: 20px; font-weight: 300; letter-spacing: -0.01em; line-height: 1.3;
+    }
+    .how-step-desc { padding: 44px 0 44px 64px; font-size: 14px; font-weight: 300; line-height: 1.8; color: var(--gray); }
+
+    /* ── TESTIMONIALS ── */
+    #testimonials { border-top: 1px solid var(--border); padding: 120px 48px; }
+    .test-inner { max-width: 1200px; margin: 0 auto; }
+    .test-list { border-top: 1px solid var(--border); }
+    .test-row {
+      display: flex; align-items: baseline; gap: 80px;
+      padding: 56px 0; border-bottom: 1px solid var(--border);
+    }
+    .test-who {
+      font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: rgba(255,255,255,0.3); flex-shrink: 0; width: 200px; line-height: 1.8;
+    }
+    .test-quote {
+      font-size: clamp(32px, 4vw, 52px); font-weight: 200;
+      letter-spacing: -0.03em; line-height: 1.05;
+    }
+
+    /* ── PRICING ── */
+    #pricing { border-top: 1px solid var(--border); padding: 120px 48px; }
+    .pricing-inner { max-width: 1200px; margin: 0 auto; }
+    .pricing-top {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      gap: 80px; padding-bottom: 80px; border-bottom: 1px solid var(--border);
+    }
+    .pricing-top h2 {
+      font-size: clamp(40px, 5.5vw, 76px); font-weight: 200;
+      letter-spacing: -0.03em; line-height: 1.0;
+    }
+    .pricing-right { max-width: 400px; flex-shrink: 0; }
+    .price-num {
+      font-size: clamp(64px, 9vw, 110px); font-weight: 200;
+      letter-spacing: -0.04em; line-height: 1; display: block; margin-bottom: 8px;
+    }
+    .price-term {
+      font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+      color: rgba(255,255,255,0.35); display: block; margin-bottom: 36px;
+    }
+    .pricing-right p {
+      font-size: 15px; font-weight: 300; line-height: 1.75; color: var(--gray);
+      margin-bottom: 36px;
+    }
+    .pricing-features {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      border-top: 1px solid var(--border); margin-top: 0;
+    }
+    .pricing-feat {
+      padding: 40px 0; border-right: 1px solid var(--border); padding-right: 40px;
+      padding-left: 0;
+    }
+    .pricing-feat:first-child { padding-left: 0; }
+    .pricing-feat:last-child { border-right: none; padding-right: 0; }
+    .feat-label {
+      font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: rgba(255,255,255,0.3); display: block; margin-bottom: 10px;
+    }
+    .feat-val { font-size: 16px; font-weight: 300; letter-spacing: -0.01em; }
+
+    /* ── FAQ ── */
+    #faq { border-top: 1px solid var(--border); padding: 120px 48px; }
+    .faq-inner { max-width: 800px; margin: 0 auto; }
+    .faq-title {
+      font-size: clamp(36px, 5vw, 64px); font-weight: 200;
+      letter-spacing: -0.03em; margin-bottom: 80px;
+    }
+    .faq-list {}
+    .faq-item { border-top: 1px solid var(--border); }
+    .faq-item:last-child { border-bottom: 1px solid var(--border); }
+    .faq-q {
+      width: 100%; background: none; border: none; cursor: pointer;
+      padding: 28px 0; display: flex; align-items: center; justify-content: space-between;
+      font-family: var(--font); font-size: 17px; font-weight: 300;
+      color: var(--white); letter-spacing: -0.01em; text-align: left; gap: 16px;
+    }
+    .faq-icon {
+      width: 24px; height: 24px; flex-shrink: 0; border: 1px solid var(--border);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 16px; color: rgba(255,255,255,0.4); transition: transform 0.3s;
+    }
+    .faq-item.open .faq-icon { transform: rotate(45deg); }
+    .faq-a {
+      font-size: 15px; font-weight: 300; line-height: 1.75; color: var(--gray);
+      max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.3s;
+    }
+    .faq-item.open .faq-a { max-height: 300px; padding-bottom: 32px; }
+
+    /* ── CTA ── */
+    #cta {
+      border-top: 1px solid var(--border);
+      padding: 160px 48px; text-align: center;
+      position: relative; overflow: hidden;
+    }
+    #cta::before {
+      content: '';
+      position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
+      width: 600px; height: 600px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(200,169,110,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    #cta h2 {
+      font-size: clamp(40px, 7vw, 96px); font-weight: 200;
+      letter-spacing: -0.03em; line-height: 1.0; margin-bottom: 24px;
+    }
+    #cta p {
+      font-size: 17px; font-weight: 300; color: var(--gray);
+      margin-bottom: 56px; max-width: 400px; margin-left: auto;
+      margin-right: auto; line-height: 1.65;
+    }
+    .cta-form {
+      display: flex; max-width: 460px; margin: 0 auto 20px;
+      border: 1px solid rgba(255,255,255,0.2); padding: 5px;
+    }
+    .cta-input {
+      flex: 1; border: none; outline: none; background: transparent;
+      padding: 13px 20px; font-size: 14px; font-weight: 300;
+      color: var(--white); font-family: var(--font); letter-spacing: 0.02em;
+    }
+    .cta-input::placeholder { color: rgba(255,255,255,0.25); }
+    .cta-submit {
+      background: var(--white); color: var(--black); border: none;
+      padding: 13px 28px; font-size: 11px; font-weight: 400;
+      font-family: var(--font); letter-spacing: 0.14em; text-transform: uppercase;
+      cursor: pointer; transition: opacity 0.2s; white-space: nowrap;
+    }
+    .cta-submit:hover { opacity: 0.82; }
+    .cta-note { font-size: 11px; color: rgba(255,255,255,0.25); letter-spacing: 0.08em; }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border); padding: 32px 48px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+    }
+    .footer-logo {
+      font-size: 13px; font-weight: 300; letter-spacing: 0.22em;
+      text-transform: uppercase; color: rgba(255,255,255,0.5);
+    }
+    .footer-links { display: flex; gap: 32px; }
+    .footer-links a {
+      font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: rgba(255,255,255,0.3); text-decoration: none; transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--white); }
+    .footer-copy { font-size: 11px; color: rgba(255,255,255,0.2); letter-spacing: 0.06em; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      nav { padding: 0 24px; }
+      .nav-links { display: none; }
+      #hero { padding: 80px 24px; }
+      .statement { padding: 80px 24px; }
+      .statement-split { grid-template-columns: 1fr; gap: 40px; }
+      .full-statement { padding: 80px 24px; }
+      .two-col { grid-template-columns: 1fr; }
+      .two-col-cell { padding: 64px 24px; border-right: none; border-bottom: 1px solid var(--border); }
+      .modes-header { padding: 80px 24px 0; }
+      .modes-grid { grid-template-columns: 1fr; }
+      .mode-cell { border-right: none; border-bottom: 1px solid var(--border); padding: 48px 24px; }
+      .how-header { padding: 80px 24px 0; }
+      .how-step { grid-template-columns: 48px 1fr; padding: 0 24px; }
+      .how-step-title { border-right: none; padding-right: 0; }
+      .how-step-desc { display: none; }
+      #testimonials, #pricing, #faq, #cta { padding: 80px 24px; }
+      .test-row { flex-direction: column; gap: 16px; }
+      .test-who { width: auto; }
+      .pricing-top { flex-direction: column; gap: 48px; }
+      .pricing-features { grid-template-columns: 1fr; }
+      .pricing-feat { border-right: none; border-bottom: 1px solid var(--border); padding: 32px 0; }
+      .pricing-feat:last-child { border-bottom: none; }
+      footer { padding: 24px; flex-direction: column; align-items: flex-start; }
+      .footer-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="#" class="nav-logo">ARQ</a>
+    <div class="nav-links">
+      <a href="#modes">Training</a>
+      <a href="#how">The Method</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+      <a href="#cta" class="nav-cta">Join Waitlist</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section id="hero">
+    <div class="hero-bg">
+      <img src="room.png" alt="The ARQ Room" />
+    </div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <span class="hero-kicker reveal">San Francisco · Now Open</span>
+      <h1 class="hero-h1 reveal">The world's first<br>AI-powered<br>therapy room.</h1>
+      <p class="hero-sub reveal">Your body is trained to its limit. Your mind determines what happens next. ARQ is the mental training room built for elite athletes — evidence-based, private, and available when competition demands it.</p>
+      <div class="hero-actions reveal">
+        <a href="#cta" class="btn-primary">Join the Waitlist</a>
+        <a href="#how" class="btn-ghost">See the method</a>
+      </div>
+    </div>
+    <div class="hero-scroll">
+      <div class="scroll-line"></div>
+      <span>Scroll</span>
+    </div>
+  </section>
+
+  <!-- STATEMENT 1 -->
+  <div class="statement reveal">
+    <div class="statement-inner statement-split">
+      <h2>Your competitors<br>train harder.<br><em>You'll train smarter.</em></h2>
+      <div class="statement-right">The difference between podium and almost is rarely physical. The mind under pressure, consistency across a season, performance when it counts — that's where championships are decided. ARQ was built for exactly that.</div>
+    </div>
+  </div>
+
+  <!-- TWO COL — MENTAL GAME / COMPETITION -->
+  <div class="two-col">
+    <div class="two-col-cell reveal">
+      <span class="cell-tag">The Mental Game</span>
+      <h3>You don't lose in the final.<br>You lose in the weeks before.</h3>
+      <p>Pressure builds long before game day. Doubt. Fatigue. The weight of expectation. ARQ gives you a private space to process it, work through it, and walk out sharper. Mental conditioning — not talk therapy. Not meditation. Training.</p>
+    </div>
+    <div class="two-col-cell reveal" style="transition-delay:.1s">
+      <span class="cell-tag">Competition Day</span>
+      <h3>When the moment comes,<br>you'll already be ready.</h3>
+      <p>ARQ builds the mental architecture that elite performance demands. Focus. Composure. Clarity under pressure. Train it like you train speed, strength, and endurance — with rigor, consistency, and a system that actually works.</p>
+    </div>
+  </div>
+
+  <!-- FULL STATEMENT -->
+  <div class="full-statement reveal">
+    <p>This isn't recovery.<br><em>This is training.</em></p>
+  </div>
+
+  <!-- MODES -->
+  <section id="modes">
+    <div class="modes-header">
+      <span style="font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(255,255,255,0.28);display:block;margin-bottom:24px;" class="reveal">The Room</span>
+      <h2 class="reveal">One room.<br>Three modes.</h2>
+    </div>
+    <div class="modes-grid">
+      <div class="mode-cell reveal">
+        <span class="mode-num">Mode 01</span>
+        <h3>Mental Performance</h3>
+        <p>Work through what's in your head with a world-class AI trained in sports psychology and therapeutic method. Pressure, doubt, slumps, form breaks — speak it out loud and leave with clarity.</p>
+      </div>
+      <div class="mode-cell reveal" style="transition-delay:.1s">
+        <span class="mode-num">Mode 02</span>
+        <h3>Reset</h3>
+        <p>A guided recovery practice calibrated to exactly where you are today. 360° surround sound transforms the room into complete stillness. Before competition. After hard training. When the noise gets loud.</p>
+      </div>
+      <div class="mode-cell reveal" style="transition-delay:.2s">
+        <span class="mode-num">Mode 03</span>
+        <h3>Performance Coaching</h3>
+        <p>Work through goals, competition strategy, and the decisions that define a season — with an AI that blends sport psychology and high-performance coaching. Built for athletes who hold themselves to an uncompromising standard.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- MEDICAL -->
+  <div class="full-statement reveal" style="border-top:1px solid var(--border)">
+    <p style="font-size:clamp(14px,1.4vw,18px);font-weight:300;letter-spacing:0;line-height:1.8;color:var(--gray);max-width:640px;">
+      <span style="font-size:clamp(28px,4vw,52px);font-weight:200;letter-spacing:-0.025em;color:var(--white);display:block;margin-bottom:28px;">Built with sports science and therapeutic rigor.</span>
+      Developed with leading clinicians and performance specialists, ARQ combines evidence-based psychology with adaptive AI — creating a system that responds to you in real time. Not a chatbot. Not generic advice. A structured, intelligent mental training session built for the demands of elite athletic performance.
+    </p>
+  </div>
+
+  <!-- PRIVACY -->
+  <div class="full-statement reveal" style="border-top:1px solid var(--border); padding-top:100px; padding-bottom:100px;">
+    <p>Completely private.<br><em>No recordings. No shared notes.</em></p>
+    <p style="font-size:17px;font-weight:300;color:var(--gray);margin-top:24px;letter-spacing:0;line-height:1.65;">A space where you can think and speak freely without consequence.</p>
+  </div>
+
+  <!-- HOW -->
+  <section id="how">
+    <div class="how-header">
+      <span style="font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(255,255,255,0.28);display:block;margin-bottom:24px;" class="reveal">The Experience</span>
+      <h2 class="reveal">Walk in.<br>Close the door.<br>Begin.</h2>
+    </div>
+    <div class="how-steps">
+      <div class="how-step reveal">
+        <span class="how-step-n">01</span>
+        <div class="how-step-title"><h3>Enter the room</h3></div>
+        <div class="how-step-desc">A private, distraction-free space — no screens, no devices. Cameras, microphones, and speakers are built invisibly into the architecture. The environment itself is the interface.</div>
+      </div>
+      <div class="how-step reveal">
+        <span class="how-step-n">02</span>
+        <div class="how-step-title"><h3>Talk</h3></div>
+        <div class="how-step-desc">Speak freely — about a slump, a competition, the pressure you're carrying, something you haven't said to anyone else. No judgment. No clock. The room listens.</div>
+      </div>
+      <div class="how-step reveal">
+        <span class="how-step-n">03</span>
+        <div class="how-step-title"><h3>ARQ reads the room</h3></div>
+        <div class="how-step-desc">ARQ reads your voice, expressions, and body language in real time — understanding not just what you say, but the emotional state beneath it.</div>
+      </div>
+      <div class="how-step reveal">
+        <span class="how-step-n">04</span>
+        <div class="how-step-title"><h3>The work begins</h3></div>
+        <div class="how-step-desc">Intelligent, attuned responses fill the space through 360° surround sound. Present, unhurried, and calibrated to the complexity of elite athletic performance.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section id="testimonials">
+    <div class="test-inner">
+      <div class="test-list">
+        <div class="test-row reveal">
+          <span class="test-who">Professional<br>Athlete</span>
+          <div class="test-quote">"Incredible"</div>
+        </div>
+        <div class="test-row reveal">
+          <span class="test-who">Sports Psychologist<br>ARQ Member</span>
+          <div class="test-quote">"I'm really grateful for ARQ"</div>
+        </div>
+        <div class="test-row reveal">
+          <span class="test-who">Olympic<br>Competitor</span>
+          <div class="test-quote">"Impressed"</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section id="pricing">
+    <div class="pricing-inner">
+      <div class="pricing-top">
+        <h2 class="reveal">Elite mental training.<br>No compromise.</h2>
+        <div class="pricing-right reveal">
+          <span class="price-num">$300</span>
+          <span class="price-term">Per month · unlimited 24/7 access</span>
+          <p>Sports psychology costs $200–$400 per session. ARQ gives you the same caliber of support — available 24/7, unlimited access, at a fraction of the cost.</p>
+          <a href="#cta" class="btn-primary">Join the Waitlist</a>
+        </div>
+      </div>
+      <div class="pricing-features">
+        <div class="pricing-feat reveal">
+          <span class="feat-label">Access</span>
+          <span class="feat-val">Unlimited · 24/7</span>
+        </div>
+        <div class="pricing-feat reveal" style="padding-left:48px">
+          <span class="feat-label">Modes</span>
+          <span class="feat-val">Therapy, Meditation, Coaching</span>
+        </div>
+        <div class="pricing-feat reveal" style="padding-left:48px">
+          <span class="feat-label">Memory</span>
+          <span class="feat-val">Continuous across every session</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq">
+    <div class="faq-inner">
+      <h2 class="faq-title reveal">Questions.</h2>
+      <div class="faq-list">
+        <div class="faq-item reveal">
+          <button class="faq-q" onclick="toggleFaq(this)">Is this as effective as working with a sports psychologist?<span class="faq-icon">+</span></button>
+          <div class="faq-a">ARQ is built on a unique and proven therapeutic method, co-created with leading mental health practitioners and performance specialists. It reads your voice, facial expressions, and body language in real time — giving it a depth that goes far beyond any app. Many of our members are practicing therapists and sports psychologists who use ARQ for themselves.</div>
+        </div>
+        <div class="faq-item reveal">
+          <button class="faq-q" onclick="toggleFaq(this)">Is my session private?<span class="faq-icon">+</span></button>
+          <div class="faq-a">Completely. No recordings, no shared notes. Your sessions are encrypted and private to you. ARQ uses your session history only to provide better, more personalised support over time — and only for you.</div>
+        </div>
+        <div class="faq-item reveal">
+          <button class="faq-q" onclick="toggleFaq(this)">What does a session feel like?<span class="faq-icon">+</span></button>
+          <div class="faq-a">Most athletes describe it as surprisingly direct. You walk in, sit down, and begin. No screen, no typing, no small talk. A calm space and a voice that stays present and asks the right questions. Most members leave feeling clearer and more focused than when they walked in.</div>
+        </div>
+        <div class="faq-item reveal">
+          <button class="faq-q" onclick="toggleFaq(this)">Can I use ARQ before competition?<span class="faq-icon">+</span></button>
+          <div class="faq-a">Yes — many members use ARQ the day before or morning of competition for a structured mental reset. You can also use it mid-season when pressure builds, or in the off-season for deeper work. There's no single protocol. ARQ adapts to where you are.</div>
+        </div>
+        <div class="faq-item reveal">
+          <button class="faq-q" onclick="toggleFaq(this)">Where are ARQ Rooms located?<span class="faq-icon">+</span></button>
+          <div class="faq-a">ARQ is currently open in San Francisco. We're expanding based on demand. Join the waitlist to be notified when a room opens near you.</div>
+        </div>
+        <div class="faq-item reveal">
+          <button class="faq-q" onclick="toggleFaq(this)">Can I cancel my membership?<span class="faq-icon">+</span></button>
+          <div class="faq-a">Yes — cancel any time, no questions asked.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section id="cta">
+    <h2 class="reveal">Your edge<br>is waiting.</h2>
+    <p class="reveal">Now open in San Francisco. Join the waitlist and we'll reach out when a room is ready for you.</p>
+    <form class="cta-form reveal" onsubmit="handleSubmit(event)">
+      <input class="cta-input" type="email" placeholder="Your email address" required />
+      <button class="cta-submit" type="submit">Join Waitlist</button>
+    </form>
+    <p class="cta-note reveal">No spam. Cancel any time.</p>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <span class="footer-logo">ARQ</span>
+    <div class="footer-links">
+      <a href="#modes">Modes</a>
+      <a href="#how">How it works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <span class="footer-copy">© 2025 ARQ. All rights reserved.</span>
+  </footer>
+
+  <script>
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.08, rootMargin: '0px 0px -20px 0px' });
+    document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+    function toggleFaq(btn) {
+      const item = btn.closest('.faq-item');
+      const isOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+      if (!isOpen) item.classList.add('open');
+    }
+
+    function handleSubmit(e) {
+      e.preventDefault();
+      const btn = e.target.querySelector('button');
+      const input = e.target.querySelector('input');
+      btn.textContent = "You're on the list";
+      btn.style.background = '#e8f5ee'; btn.style.color = '#1a6b3a';
+      input.value = ''; input.disabled = true; btn.disabled = true;
+    }
+  </script>
+</body>
+</html>
